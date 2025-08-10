@@ -5,6 +5,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace LearnOpenTKRender
 {
@@ -49,14 +50,7 @@ namespace LearnOpenTKRender
         private Shader _shader;
 
 
-
-
-
-
         private Camera _camera;
-        private bool _firstMove = true;
-        private Vector2 _lastPos;
-
         ImGuiController _controller;
 
 
@@ -81,32 +75,29 @@ namespace LearnOpenTKRender
 
 
 
-            _camera = new Camera(new Vector3(0, 0, 5));
-    
-
-
+            _camera = new Camera(new Vector3(0, 0, 5), this.FramebufferSize.X, this.FramebufferSize.Y);
+            
             _controller = new ImGuiController(ClientSize.X, ClientSize.Y);
+            _controller.SetLightStyle(true,0.2f);
         }
 
         private double _time = 0;
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
-            _controller.Update(this, (float)args.Time);
+          
+            _controller.Update(this, (float)args.Time,!_cameraEnable);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             GL.ClearColor(0.3f, 0.2f, 0.5f, 1.0f);
-
-            
             _vao.Bind();
             _shader.Use();
      
             Matrix4.CreateRotationY(MathHelper.DegreesToRadians((float)_time), out var uModel);
             var view = _camera.GetViewMatrix();
-            var projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(90), this.ClientSize.X * 1.0f / this.ClientSize.Y, 0.1f, 1000f);
+            var projection = _camera.GetProjectionMatrix();
             _shader.SetUniform("uModel", uModel);
             _shader.SetUniform("uView", view);
             _shader.SetUniform("uProjection", projection);
-
 
             //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
@@ -131,28 +122,11 @@ namespace LearnOpenTKRender
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             base.OnUpdateFrame(args);
-            if(_cameraEnable)
-                _camera.ProcessKeyboard(KeyboardState, (float)args.Time);
-        }
-
-        protected override void OnMouseMove(MouseMoveEventArgs e)
-        {
-            base.OnMouseMove(e);
             if (_cameraEnable)
             {
-                if (_firstMove)
-                {
-                    _lastPos = new Vector2(e.X, e.Y);
-                    _firstMove = false;
-                }
-
-                float xOffset = e.X - _lastPos.X;
-                float yOffset = _lastPos.Y - e.Y;
-                _lastPos = new Vector2(e.X, e.Y);
-
-                _camera.ProcessMouseMovement(xOffset, yOffset);
+                _camera.ProcessKeyboard(KeyboardState, (float)args.Time);
+                _camera.ProcessMouseMovement(MouseState);
             }
-            
         }
 
         protected override void OnFramebufferResize(FramebufferResizeEventArgs e)
@@ -179,15 +153,17 @@ namespace LearnOpenTKRender
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
             base.OnKeyDown(e);
-            if (e.Shift)
+            if (e.Key == Keys.Tab)
             {
-                CursorState = CursorState == CursorState.Grabbed ? CursorState.Normal : CursorState.Grabbed;
-                if (CursorState == CursorState.Grabbed)
+                if (CursorState == CursorState.Normal)
                 {
                     _cameraEnable = true;
+                    _camera.ResetMouseMovement();
+                    CursorState = CursorState.Grabbed;
                 }
                 else
                 {
+                    CursorState = CursorState.Normal;
                     _cameraEnable = false;
                 }
             }

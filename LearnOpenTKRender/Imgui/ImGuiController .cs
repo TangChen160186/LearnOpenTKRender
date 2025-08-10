@@ -8,6 +8,7 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System.Diagnostics;
 using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
+using Vector4 = System.Numerics.Vector4;
 
 namespace Dear_ImGui_Sample
 {
@@ -54,7 +55,8 @@ namespace Dear_ImGui_Sample
 
             KHRDebugAvailable = (major == 4 && minor >= 3) || IsExtensionSupported("KHR_debug");
 
-            CompatibilityProfile = (GL.GetInteger((GetPName)All.ContextProfileMask) & (int)All.ContextCompatibilityProfileBit) != 0;
+            CompatibilityProfile =
+                (GL.GetInteger((GetPName)All.ContextProfileMask) & (int)All.ContextCompatibilityProfileBit) != 0;
 
             IntPtr context = ImGui.CreateContext();
             ImGui.SetCurrentContext(context);
@@ -177,7 +179,8 @@ void main()
             GL.TexStorage2D(TextureTarget2d.Texture2D, mips, SizedInternalFormat.Rgba8, width, height);
             LabelObject(ObjectLabelIdentifier.Texture, _fontTexture, "ImGui Text Atlas");
 
-            GL.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, width, height, PixelFormat.Bgra, PixelType.UnsignedByte, pixels);
+            GL.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0, width, height, PixelFormat.Bgra, PixelType.UnsignedByte,
+                pixels);
 
             GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 
@@ -186,8 +189,10 @@ void main()
 
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, mips - 1);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter,
+                (int)TextureMagFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
+                (int)TextureMinFilter.Linear);
 
             // Restore state
             GL.BindTexture(TextureTarget.Texture2D, prevTexture2D);
@@ -214,7 +219,7 @@ void main()
         /// <summary>
         /// Updates ImGui input and IO configuration state.
         /// </summary>
-        public void Update(GameWindow wnd, float deltaSeconds)
+        public void Update(GameWindow wnd, float deltaSeconds, bool enableInput = true)
         {
             if (_frameBegun)
             {
@@ -222,7 +227,7 @@ void main()
             }
 
             SetPerFrameImGuiData(deltaSeconds);
-            UpdateImGuiInput(wnd);
+            UpdateImGuiInput(wnd,enableInput);
 
             _frameBegun = true;
             ImGui.NewFrame();
@@ -244,42 +249,65 @@ void main()
 
         readonly List<char> PressedChars = new List<char>();
 
-        private void UpdateImGuiInput(GameWindow wnd)
+        private void UpdateImGuiInput(GameWindow wnd, bool enableInput)
         {
             ImGuiIOPtr io = ImGui.GetIO();
-
-            MouseState MouseState = wnd.MouseState;
-            KeyboardState KeyboardState = wnd.KeyboardState;
-
-            io.MouseDown[0] = MouseState[MouseButton.Left];
-            io.MouseDown[1] = MouseState[MouseButton.Right];
-            io.MouseDown[2] = MouseState[MouseButton.Middle];
-            io.MouseDown[3] = MouseState[MouseButton.Button4];
-            io.MouseDown[4] = MouseState[MouseButton.Button5];
-
-            var screenPoint = new Vector2i((int)MouseState.X, (int)MouseState.Y);
-            var point = screenPoint;//wnd.PointToClient(screenPoint);
-            io.MousePos = new System.Numerics.Vector2(point.X, point.Y);
-
-            foreach (Keys key in Enum.GetValues(typeof(Keys)))
+            if (enableInput)
             {
-                if (key == Keys.Unknown)
+                MouseState MouseState = wnd.MouseState;
+                KeyboardState KeyboardState = wnd.KeyboardState;
+
+                io.MouseDown[0] = MouseState[MouseButton.Left];
+                io.MouseDown[1] = MouseState[MouseButton.Right];
+                io.MouseDown[2] = MouseState[MouseButton.Middle];
+                io.MouseDown[3] = MouseState[MouseButton.Button4];
+                io.MouseDown[4] = MouseState[MouseButton.Button5];
+
+                var screenPoint = new Vector2i((int)MouseState.X, (int)MouseState.Y);
+                var point = screenPoint; //wnd.PointToClient(screenPoint);
+                io.MousePos = new System.Numerics.Vector2(point.X, point.Y);
+
+                foreach (Keys key in Enum.GetValues(typeof(Keys)))
                 {
-                    continue;
+                    if (key == Keys.Unknown)
+                    {
+                        continue;
+                    }
+
+                    io.AddKeyEvent(TranslateKey(key), KeyboardState.IsKeyDown(key));
                 }
-                io.AddKeyEvent(TranslateKey(key), KeyboardState.IsKeyDown(key));
-            }
 
-            foreach (var c in PressedChars)
+                foreach (var c in PressedChars)
+                {
+                    io.AddInputCharacter(c);
+                }
+
+                PressedChars.Clear();
+
+                io.KeyCtrl = KeyboardState.IsKeyDown(Keys.LeftControl) || KeyboardState.IsKeyDown(Keys.RightControl);
+                io.KeyAlt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
+                io.KeyShift = KeyboardState.IsKeyDown(Keys.LeftShift) || KeyboardState.IsKeyDown(Keys.RightShift);
+                io.KeySuper = KeyboardState.IsKeyDown(Keys.LeftSuper) || KeyboardState.IsKeyDown(Keys.RightSuper);
+            }
+            else
             {
-                io.AddInputCharacter(c);
-            }
-            PressedChars.Clear();
+                // 禁用输入时清除所有输入状态
+                io.MouseDown[0] = false;
+                io.MouseDown[1] = false;
+                io.MouseDown[2] = false;
+                io.MouseDown[3] = false;
+                io.MouseDown[4] = false;
 
-            io.KeyCtrl = KeyboardState.IsKeyDown(Keys.LeftControl) || KeyboardState.IsKeyDown(Keys.RightControl);
-            io.KeyAlt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
-            io.KeyShift = KeyboardState.IsKeyDown(Keys.LeftShift) || KeyboardState.IsKeyDown(Keys.RightShift);
-            io.KeySuper = KeyboardState.IsKeyDown(Keys.LeftSuper) || KeyboardState.IsKeyDown(Keys.RightSuper);
+                // 保持鼠标位置但不更新（避免界面跳动）
+
+                PressedChars.Clear();
+
+                io.KeyCtrl = false;
+                io.KeyAlt = false;
+                io.KeyShift = false;
+                io.KeySuper = false;
+            }
+    
         }
 
         internal void PressChar(char keyChar)
@@ -327,6 +355,7 @@ void main()
                     GL.GetInteger(GetPName.ScissorBox, iptr);
                 }
             }
+
             Span<int> prevPolygonMode = stackalloc int[2];
             unsafe
             {
@@ -408,10 +437,12 @@ void main()
             {
                 ImDrawListPtr cmd_list = draw_data.CmdLists[n];
 
-                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
+                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
+                    cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
                 CheckGLError($"Data Vert {n}");
 
-                GL.BufferSubData(BufferTarget.ElementArrayBuffer, IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort), cmd_list.IdxBuffer.Data);
+                GL.BufferSubData(BufferTarget.ElementArrayBuffer, IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort),
+                    cmd_list.IdxBuffer.Data);
                 CheckGLError($"Data Idx {n}");
 
                 for (int cmd_i = 0; cmd_i < cmd_list.CmdBuffer.Size; cmd_i++)
@@ -429,17 +460,22 @@ void main()
 
                         // We do _windowHeight - (int)clip.W instead of (int)clip.Y because gl has flipped Y when it comes to these coordinates
                         var clip = pcmd.ClipRect;
-                        GL.Scissor((int)clip.X, _windowHeight - (int)clip.W, (int)(clip.Z - clip.X), (int)(clip.W - clip.Y));
+                        GL.Scissor((int)clip.X, _windowHeight - (int)clip.W, (int)(clip.Z - clip.X),
+                            (int)(clip.W - clip.Y));
                         CheckGLError("Scissor");
 
                         if ((io.BackendFlags & ImGuiBackendFlags.RendererHasVtxOffset) != 0)
                         {
-                            GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)pcmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(pcmd.IdxOffset * sizeof(ushort)), unchecked((int)pcmd.VtxOffset));
+                            GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)pcmd.ElemCount,
+                                DrawElementsType.UnsignedShort, (IntPtr)(pcmd.IdxOffset * sizeof(ushort)),
+                                unchecked((int)pcmd.VtxOffset));
                         }
                         else
                         {
-                            GL.DrawElements(BeginMode.Triangles, (int)pcmd.ElemCount, DrawElementsType.UnsignedShort, (int)pcmd.IdxOffset * sizeof(ushort));
+                            GL.DrawElements(BeginMode.Triangles, (int)pcmd.ElemCount, DrawElementsType.UnsignedShort,
+                                (int)pcmd.IdxOffset * sizeof(ushort));
                         }
+
                         CheckGLError("Draw");
                     }
                 }
@@ -455,16 +491,21 @@ void main()
             GL.BindVertexArray(prevVAO);
             GL.Scissor(prevScissorBox[0], prevScissorBox[1], prevScissorBox[2], prevScissorBox[3]);
             GL.BindBuffer(BufferTarget.ArrayBuffer, prevArrayBuffer);
-            GL.BlendEquationSeparate((BlendEquationMode)prevBlendEquationRgb, (BlendEquationMode)prevBlendEquationAlpha);
+            GL.BlendEquationSeparate((BlendEquationMode)prevBlendEquationRgb,
+                (BlendEquationMode)prevBlendEquationAlpha);
             GL.BlendFuncSeparate(
                 (BlendingFactorSrc)prevBlendFuncSrcRgb,
                 (BlendingFactorDest)prevBlendFuncDstRgb,
                 (BlendingFactorSrc)prevBlendFuncSrcAlpha,
                 (BlendingFactorDest)prevBlendFuncDstAlpha);
-            if (prevBlendEnabled) GL.Enable(EnableCap.Blend); else GL.Disable(EnableCap.Blend);
-            if (prevDepthTestEnabled) GL.Enable(EnableCap.DepthTest); else GL.Disable(EnableCap.DepthTest);
-            if (prevCullFaceEnabled) GL.Enable(EnableCap.CullFace); else GL.Disable(EnableCap.CullFace);
-            if (prevScissorTestEnabled) GL.Enable(EnableCap.ScissorTest); else GL.Disable(EnableCap.ScissorTest);
+            if (prevBlendEnabled) GL.Enable(EnableCap.Blend);
+            else GL.Disable(EnableCap.Blend);
+            if (prevDepthTestEnabled) GL.Enable(EnableCap.DepthTest);
+            else GL.Disable(EnableCap.DepthTest);
+            if (prevCullFaceEnabled) GL.Enable(EnableCap.CullFace);
+            else GL.Disable(EnableCap.CullFace);
+            if (prevScissorTestEnabled) GL.Enable(EnableCap.ScissorTest);
+            else GL.Disable(EnableCap.ScissorTest);
             if (GLVersion <= 310 || CompatibilityProfile)
             {
                 GL.PolygonMode(MaterialFace.Front, (PolygonMode)prevPolygonMode[0]);
@@ -628,6 +669,95 @@ void main()
                 case Keys.RightSuper: return ImGuiKey.RightSuper;
                 case Keys.Menu: return ImGuiKey.Menu;
                 default: return ImGuiKey.None;
+            }
+        }
+
+
+
+        public void SetLightStyle(bool isDark = false, float alpha = 1.0f)
+        {
+            var style = ImGui.GetStyle();
+
+            // 基础样式设置
+            style.Alpha = 1.0f;
+            style.FrameRounding = 3.0f;
+
+            // 颜色设置
+            var colors = style.Colors;
+            colors[(int)ImGuiCol.Text] = new System.Numerics.Vector4(0.00f, 0.00f, 0.00f, 1.00f);
+            colors[(int)ImGuiCol.TextDisabled] = new System.Numerics.Vector4(0.60f, 0.60f, 0.60f, 1.00f);
+            colors[(int)ImGuiCol.WindowBg] = new System.Numerics.Vector4(0.94f, 0.94f, 0.94f, 0.94f);
+            colors[(int)ImGuiCol.ChildBg] = new System.Numerics.Vector4(0.00f, 0.00f, 0.00f, 0.00f);
+            colors[(int)ImGuiCol.PopupBg] = new System.Numerics.Vector4(1.00f, 1.00f, 1.00f, 0.94f);
+            colors[(int)ImGuiCol.Border] = new System.Numerics.Vector4(0.00f, 0.00f, 0.00f, 0.39f);
+            colors[(int)ImGuiCol.BorderShadow] = new System.Numerics.Vector4(1.00f, 1.00f, 1.00f, 0.10f);
+            colors[(int)ImGuiCol.FrameBg] = new Vector4(1.00f, 1.00f, 1.00f, 0.94f);
+            colors[(int)ImGuiCol.FrameBgHovered] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.40f);
+            colors[(int)ImGuiCol.FrameBgActive] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.67f);
+            colors[(int)ImGuiCol.TitleBg] = new System.Numerics.Vector4(0.96f, 0.96f, 0.96f, 1.00f);
+            colors[(int)ImGuiCol.TitleBgCollapsed] = new System.Numerics.Vector4(1.00f, 1.00f, 1.00f, 0.51f);
+            colors[(int)ImGuiCol.TitleBgActive] = new System.Numerics.Vector4(0.82f, 0.82f, 0.82f, 1.00f);
+            colors[(int)ImGuiCol.MenuBarBg] = new System.Numerics.Vector4(0.86f, 0.86f, 0.86f, 1.00f);
+            colors[(int)ImGuiCol.ScrollbarBg] = new System.Numerics.Vector4(0.98f, 0.98f, 0.98f, 0.53f);
+            colors[(int)ImGuiCol.ScrollbarGrab] = new System.Numerics.Vector4(0.69f, 0.69f, 0.69f, 1.00f);
+            colors[(int)ImGuiCol.ScrollbarGrabHovered] = new System.Numerics.Vector4(0.59f, 0.59f, 0.59f, 1.00f);
+            colors[(int)ImGuiCol.ScrollbarGrabActive] = new System.Numerics.Vector4(0.49f, 0.49f, 0.49f, 1.00f);
+            colors[(int)ImGuiCol.CheckMark] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 1.00f);
+            colors[(int)ImGuiCol.SliderGrab] = new System.Numerics.Vector4(0.24f, 0.52f, 0.88f, 1.00f);
+            colors[(int)ImGuiCol.SliderGrabActive] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 1.00f);
+            colors[(int)ImGuiCol.Button] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.40f);
+            colors[(int)ImGuiCol.ButtonHovered] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 1.00f);
+            colors[(int)ImGuiCol.ButtonActive] = new System.Numerics.Vector4(0.06f, 0.53f, 0.98f, 1.00f);
+            colors[(int)ImGuiCol.Header] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.31f);
+            colors[(int)ImGuiCol.HeaderHovered] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.80f);
+            colors[(int)ImGuiCol.HeaderActive] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 1.00f);
+            colors[(int)ImGuiCol.ResizeGrip] = new System.Numerics.Vector4(1.00f, 1.00f, 1.00f, 0.50f);
+            colors[(int)ImGuiCol.ResizeGripHovered] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.67f);
+            colors[(int)ImGuiCol.ResizeGripActive] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.95f);
+            colors[(int)ImGuiCol.PlotLines] = new System.Numerics.Vector4(0.39f, 0.39f, 0.39f, 1.00f);
+            colors[(int)ImGuiCol.PlotLinesHovered] = new System.Numerics.Vector4(1.00f, 0.43f, 0.35f, 1.00f);
+            colors[(int)ImGuiCol.PlotHistogram] = new System.Numerics.Vector4(0.90f, 0.70f, 0.00f, 1.00f);
+            colors[(int)ImGuiCol.PlotHistogramHovered] = new System.Numerics.Vector4(1.00f, 0.60f, 0.00f, 1.00f);
+            colors[(int)ImGuiCol.TextSelectedBg] = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 0.35f);
+
+            // 暗色主题处理
+            if (isDark)
+            {
+                for (int i = 0; i < (int)ImGuiCol.COUNT; i++)
+                {
+                    var col = colors[i];
+                    ImGui.ColorConvertRGBtoHSV(col.X, col.Y, col.Z, out float h, out float s, out float v);
+
+                    if (s < 0.1f)
+                    {
+                        v = 1.0f - v;
+                    }
+
+                    ImGui.ColorConvertHSVtoRGB(h, s, v, out col.X, out col.Y, out col.Z);
+
+                    if (col.W < 1.0f)
+                    {
+                        col.W *= alpha;
+                    }
+
+                    colors[i] = col;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < (int)ImGuiCol.COUNT; i++)
+                {
+                    var col = colors[i];
+                    if (col.W < 1.0f)
+                    {
+                        col.X *= alpha;
+                        col.Y *= alpha;
+                        col.Z *= alpha;
+                        col.W *= alpha;
+                    }
+
+                    colors[i] = col;
+                }
             }
         }
     }
