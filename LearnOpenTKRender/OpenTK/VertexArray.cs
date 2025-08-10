@@ -1,6 +1,7 @@
-﻿using System.Runtime.InteropServices;
-using OpenTK.Graphics.OpenGL4;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace LearnOpenTKRender.OpenTK
 {
@@ -219,5 +220,196 @@ namespace LearnOpenTKRender.OpenTK
             var fragmentSource = File.ReadAllText(fragmentShaderPath);
             return new Shader(vertexSource, fragmentSource);
         }
+    }
+
+
+    public class Texture2D : IDisposable
+    {
+        private int _handle;
+        public int Handle => _handle;
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+        public int MipLevels { get; private set; }
+        public PixelFormat Format { get; private set; }
+        public bool IsValid => Handle != 0 && !_disposed;
+
+        private bool _disposed = false;
+
+        // 1. 从描述符创建（最灵活）
+        public Texture2D(int width, int height, PixelFormat format, bool generateMips = true)
+        {
+            Width = width;
+            Height = height;
+            Format = format;
+            MipLevels = generateMips ? CalculateMipLevels(width, height) : 1;
+            GL.CreateTextures(TextureTarget.Texture2D,1,out _handle);
+            GL.TextureStorage2D(Handle, MipLevels, format.ToOpenGL(), Width, Height);
+
+            SetDefaultParameters();
+        }
+
+        // 2. 从文件加载（最常用）
+        public Texture2D(string filePath, bool sRGB = true)
+        {
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Texture file not found: {filePath}");
+
+            using var bitmap = new Bitmap(filePath);
+            Width = bitmap.Width;
+            Height = bitmap.Height;
+            Format = sRGB ? PixelFormat.R8G8B8A8_UNorm_sRGB : PixelFormat.R8G8B8A8_UNorm;
+            MipLevels = CalculateMipLevels(Width, Height);
+
+            Handle = GL.CreateTexture(TextureTarget.Texture2D);
+            GL.TextureStorage2D(Handle, MipLevels, Format.ToOpenGL(), Width, Height);
+
+            UploadBitmapData(bitmap);
+            SetDefaultParameters();
+            GL.GenerateTextureMipmap(Handle);
+        }
+
+        // 3. 从数据创建（程序生成）
+        public Texture2D(int width, int height, byte[] data, PixelFormat format = PixelFormat.R8G8B8A8_UNorm)
+        {
+            Width = width;
+            Height = height;
+            Format = format;
+            MipLevels = 1; // 数据纹理通常不需要mip
+
+            Handle = GL.CreateTexture(TextureTarget.Texture2D);
+            GL.TextureStorage2D(Handle, MipLevels, format.ToOpenGL(), Width, Height);
+
+            SetData(data);
+            SetDefaultParameters();
+        }
+
+        // 核心方法
+        public void SetData(byte[] data, int mipLevel = 0)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+
+            int width = Math.Max(1, Width >> mipLevel);
+            int height = Math.Max(1, Height >> mipLevel);
+
+            GL.TextureSubImage2D(Handle, mipLevel, 0, 0, width, height,
+                Format.GetPixelFormat(), Format.GetPixelType(), data);
+        }
+
+        public void Bind(int textureUnit = 0)
+        {
+            GL.ActiveTexture(TextureUnit.Texture0 + textureUnit);
+            GL.BindTexture(TextureTarget.Texture2D, Handle);
+        }
+
+        public void BindToUnit(int unit)
+        {
+            GL.BindTextureUnit(unit, Handle);
+        }
+
+        // 参数设置
+        public void SetFilterMode(TextureMinFilter minFilter, TextureMagFilter magFilter)
+        {
+            GL.TextureParameter(Handle, TextureParameterName.TextureMinFilter, (int)minFilter);
+            GL.TextureParameter(Handle, TextureParameterName.TextureMagFilter, (int)magFilter);
+        }
+
+        public void SetWrapMode(TextureWrapMode wrapS, TextureWrapMode wrapT)
+        {
+            GL.TextureParameter(Handle, TextureParameterName.TextureWrapS, (int)wrapS);
+            GL.TextureParameter(Handle, TextureParameterName.TextureWrapT, (int)wrapT);
+        }
+
+        public void SetAnisotropy(float level)
+        {
+            GL.TextureParameter(Handle, (TextureParameterName)ExtTextureFilterAnisotropic.TextureMaxAnisotropyExt, level);
+        }
+
+        // 便捷静态方法
+        public static Texture2D CreateSolid(int width, int height, Color color)
+        {
+            byte[] data = new byte[width * height * 4];
+            for (int i = 0; i < data.Length; i += 4)
+            {
+                data[i] = color.R;
+                data[i + 1] = color.G;
+                data[i + 2] = color.B;
+                data[i + 3] = color.A;
+            }
+            return new Texture2D(width, height, data);
+        }
+
+        public static Texture2D CreateRenderTarget(int width, int height, PixelFormat format = PixelFormat.R8G8B8A8_UNorm)
+        {
+            return new Texture2D(width, height, format, false);
+        }
+
+        public static Texture2D CreateDepthBuffer(int width, int height)
+        {
+            return new Texture2D(width, height, PixelFormat.D24_UNorm_S8_UInt, false);
+        }
+
+        // 私有辅助方法
+        private void SetDefaultParameters()
+        {
+            if (Format.IsDepthFormat())
+            {
+                SetFilterMode(TextureMinFilter.Nearest, TextureMagFilter.Nearest);
+                SetWrapMode(TextureWrapMode.ClampToEdge, TextureWrapMode.ClampToEdge);
+            }
+            else
+            {
+                var minFilter = MipLevels > 1 ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear;
+                SetFilterMode(minFilter, TextureMagFilter.Linear);
+                SetWrapMode(TextureWrapMode.Repeat, TextureWrapMode.Repeat);
+                SetAnisotropy(16.0f);
+            }
+        }
+
+        private void UploadBitmapData(Bitmap bitmap)
+        {
+            var bitmapData = bitmap.LockBits(new Rectangle(0, 0, Width, Height),
+                ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                GL.TextureSubImage2D(Handle, 0, 0, 0, Width, Height,
+                    OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, bitmapData.Scan0);
+            }
+            finally
+            {
+                bitmap.UnlockBits(bitmapData);
+            }
+        }
+
+        private static int CalculateMipLevels(int width, int height)
+        {
+            return (int)Math.Floor(Math.Log2(Math.Max(width, height))) + 1;
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed && Handle != 0)
+            {
+                GL.DeleteTexture(Handle);
+                Handle = 0;
+                _disposed = true;
+            }
+        }
+    }
+
+    // 简化的格式枚举
+    public enum PixelFormat
+    {
+        R8_UNorm,
+        R8G8_UNorm,
+        R8G8B8A8_UNorm,
+        R8G8B8A8_UNorm_sRGB,
+        R16_Float,
+        R16G16_Float,
+        R16G16B16A16_Float,
+        R32_Float,
+        R32G32B32A32_Float,
+        D16_UNorm,
+        D24_UNorm_S8_UInt,
+        D32_Float
     }
 }
