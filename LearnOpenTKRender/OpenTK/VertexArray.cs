@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.OpenGL4;
+﻿using System.Runtime.InteropServices;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
 namespace LearnOpenTKRender.OpenTK
@@ -183,11 +184,28 @@ namespace LearnOpenTKRender.OpenTK
         
         public void Dispose()
         {
-            GL.DeleteShader(Handle);
+            GL.DeleteProgram(Handle);
         }
     }
 
-
+    class UniformBuffer : IDisposable
+    {
+        internal int Handle;
+        public UniformBuffer(int bindingPoint, int size)
+        {
+            GL.CreateBuffers(1, out Handle);
+            GL.NamedBufferStorage(Handle, size, IntPtr.Zero, BufferStorageFlags.DynamicStorageBit);
+            GL.BindBufferBase(BufferRangeTarget.UniformBuffer, bindingPoint, Handle);
+        }
+        public void UpdateData<T>(ref T data) where T : struct
+        {
+            GL.NamedBufferSubData(Handle, IntPtr.Zero, Marshal.SizeOf<T>(), ref data);
+        }
+        public void Dispose()
+        {
+            GL.DeleteBuffer(Handle);
+        }
+    }
     class ShaderLoader
     {
         public static Shader Load(string vertexShaderPath, string fragmentShaderPath)

@@ -1,4 +1,5 @@
-﻿using OpenTK.Mathematics;
+﻿using ImGuiNET;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace LearnOpenTKRender
@@ -172,6 +173,38 @@ namespace LearnOpenTKRender
                 _aspectRatio = newAspectRatio;
                 _projectionMatrixDirty = true;
             }
+        }
+
+
+        public void OnGui()
+        {
+            ImGui.Begin("Camera Settings");
+
+            System.Numerics.Vector3 position = new System.Numerics.Vector3(Position.X, Position.Y, Position.Z);
+            ImGui.DragFloat3("Position",ref position);
+
+            System.Numerics.Vector3 rotation = new System.Numerics.Vector3(_pitch % 360, _yaw % 360,0);
+            ImGui.DragFloat3("Rotation",ref rotation);
+
+            float fov = _fov;
+            if (ImGui.DragFloat("Fov", ref fov,0.1f,1.0f,179.0f))
+            {
+                Fov = fov;
+            }
+
+            float nearPlane = _nearPlane;
+            if (ImGui.DragFloat("NearPlane", ref nearPlane,0.01f,0.01f,1000.0f))
+            {
+                NearPlane = nearPlane;
+            }
+
+            float farPlane = _farPlane;
+            if (ImGui.DragFloat("FarPlane", ref farPlane,0.01f,0.01f,1000.0f))
+            {
+                FarPlane = farPlane;
+            }
+
+            ImGui.End();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Dear_ImGui_Sample;
+﻿using System.Runtime.InteropServices;
+using Dear_ImGui_Sample;
 using ImGuiNET;
 using LearnOpenTKRender.OpenTK;
 using OpenTK.Graphics.OpenGL4;
@@ -9,6 +10,12 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace LearnOpenTKRender
 {
+    struct EngineUBO
+    {
+        public Matrix4 Model;
+        public Matrix4 View;
+        public Matrix4 Projection;
+    }
     internal class Game(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
         : GameWindow(gameWindowSettings, nativeWindowSettings)
     {
@@ -46,7 +53,7 @@ namespace LearnOpenTKRender
 
         private VertexBuffer _vbo;
         private IndexBuffer _ibo;
-
+        private UniformBuffer _ubo;
         private Shader _shader;
 
 
@@ -76,28 +83,47 @@ namespace LearnOpenTKRender
 
 
             _camera = new Camera(new Vector3(0, 0, 5), this.FramebufferSize.X, this.FramebufferSize.Y);
-            
+
             _controller = new ImGuiController(ClientSize.X, ClientSize.Y);
-            _controller.SetLightStyle(true,0.2f);
+            _controller.SetLightStyle(true, 0.3f);
+
+            _ubo = new UniformBuffer(0, Marshal.SizeOf<EngineUBO>());
         }
 
+        override protected void OnUnload()
+        {
+            base.OnUnload();
+            _controller.Dispose();
+            _vao.Dispose();
+            _vbo.Dispose();
+            _ibo.Dispose();
+            _ubo.Dispose();
+            _shader.Dispose();
+        }
         private double _time = 0;
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
-          
-            _controller.Update(this, (float)args.Time,!_cameraEnable);
+
+            _controller.Update(this, (float)args.Time, !_cameraEnable);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            GL.ClearColor(0.3f, 0.2f, 0.5f, 1.0f);
+            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             _vao.Bind();
             _shader.Use();
-     
-            Matrix4.CreateRotationY(MathHelper.DegreesToRadians((float)_time), out var uModel);
+
+            Matrix4.CreateRotationY(MathHelper.DegreesToRadians((float)_time), out var model);
             var view = _camera.GetViewMatrix();
             var projection = _camera.GetProjectionMatrix();
-            _shader.SetUniform("uModel", uModel);
-            _shader.SetUniform("uView", view);
-            _shader.SetUniform("uProjection", projection);
+            EngineUBO ubo = new EngineUBO()
+            {
+                Model = model,
+                View = view,
+                Projection = projection
+            };
+            _ubo.UpdateData(ref ubo);
+            // _shader.SetUniform("uModel", uModel);
+            // _shader.SetUniform("uView", view);
+            // _shader.SetUniform("uProjection", projection);
 
             //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
@@ -108,10 +134,10 @@ namespace LearnOpenTKRender
 
             // Enable Docking
             //ImGui.DockSpaceOverViewport();
+
+            _camera.OnGui();
             ImGui.ShowDemoWindow();
-
             _controller.Render();
-
             ImGuiController.CheckGLError("End of frame");
 
             SwapBuffers();
