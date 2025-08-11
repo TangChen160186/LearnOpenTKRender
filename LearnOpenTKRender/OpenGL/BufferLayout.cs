@@ -1,4 +1,4 @@
-namespace LearnOpenTKRender.OpenTK;
+namespace LearnOpenTKRender.OpenGL;
 
 public enum ShaderDataType
 {
