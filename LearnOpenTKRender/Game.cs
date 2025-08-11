@@ -37,16 +37,6 @@ namespace LearnOpenTKRender
             -0.5f,  0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f, // Top Left
         ];
 
-
-        private float[] _fullScreenVertices =
-        [
-
-        ];
-
-        uint[] _fullScreenIndex =
-        [
-          
-        ];
         uint[] _index =
         [
             // Front face
@@ -62,8 +52,23 @@ namespace LearnOpenTKRender
             // Bottom face
             0, 1, 5, 5, 4, 0
         ];
-        private VertexArray _vao;
 
+        private float[] _fullScreenVertices =
+        [
+            // 位置 (NDC坐标)    纹理坐标
+            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, // 左下
+            1.0f, -1.0f, 0.0f,  1.0f, 0.0f, // 右下
+            1.0f,  1.0f, 0.0f,  1.0f, 1.0f, // 右上
+            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f  // 左上
+        ];
+
+        uint[] _fullScreenIndex =
+        [
+            0, 1, 2,  // 第一个三角形
+            2, 3, 0   // 第二个三角形
+        ];
+
+        private VertexArray _vao;
         private VertexBuffer _vbo;
         private IndexBuffer _ibo;
         private UniformBuffer _ubo;
@@ -72,17 +77,14 @@ namespace LearnOpenTKRender
 
 
         private VertexBuffer _fullScreenVbo;
-
         private IndexBuffer _fullScreenIbo;
-
         private Shader _fullScreenShader;
-
         private VertexArray _fullScreenVao;
-
-
         private Texture2D _attachmentColorTexture;
         private Texture2D _attachmentDepthTexture;
         private Framebuffer _framebuffer;
+
+
         private Camera _camera;
         ImGuiController _controller;
 
@@ -91,6 +93,8 @@ namespace LearnOpenTKRender
         protected override void OnLoad()
         {
             base.OnLoad();
+
+ 
             _vao = new VertexArray();
             _vbo = new VertexBuffer(_vertices);
             _ibo = new IndexBuffer(_index);
@@ -102,10 +106,10 @@ namespace LearnOpenTKRender
             ]));
             _vao.AddIndexBuffer(_ibo);
 
-            _shader = ShaderLoader.Load("Assets/Shaders/VertexShader.glsl", "Assets/Shaders/FragmentShader.glsl");
+            _shader = ShaderLoader.Load("Assets/Shaders/Scene.vert.glsl", "Assets/Shaders/Scene.frag.glsl");
 
             GL.Viewport(0, 0, this.FramebufferSize.X, this.FramebufferSize.Y);
-            GL.Enable(EnableCap.DepthTest);
+      
 
 
 
@@ -115,7 +119,7 @@ namespace LearnOpenTKRender
             _controller.SetLightStyle(true, 0.3f);
 
             _ubo = new UniformBuffer(0, Marshal.SizeOf<EngineUBO>());
-            _diffuseTex = TextureLoader.LoadTextureFromPath("Assets/Images/CONTAINER2.png", PixelFormat.R8G8B8A8UNorm);
+            _diffuseTex = TextureLoader.LoadTextureFromPath("Assets/Images/container2.png", PixelFormat.R8G8B8A8UNorm);
 
             _attachmentDepthTexture = Texture2D.CreateDepthBuffer(this.FramebufferSize.X,this.FramebufferSize.Y);
             _attachmentColorTexture = Texture2D.CreateRenderTarget(this.FramebufferSize.X, this.FramebufferSize.Y);
@@ -123,7 +127,7 @@ namespace LearnOpenTKRender
 
             _framebuffer.AttachColorTexture(_attachmentColorTexture,0);
             _framebuffer.AttachDepthTexture(_attachmentDepthTexture);
-
+            _framebuffer.SetDrawBuffers(DrawBuffersEnum.ColorAttachment0);
             _fullScreenVao = new VertexArray();
             _fullScreenVbo = new VertexBuffer(_fullScreenVertices);
             _fullScreenIbo = new IndexBuffer(_fullScreenIndex);
@@ -132,8 +136,7 @@ namespace LearnOpenTKRender
                 new BufferElement(ShaderDataType.Float2)]) // Vertex texCoord
             );
             _fullScreenVao.AddIndexBuffer(_fullScreenIbo);
-
-
+            _fullScreenShader = ShaderLoader.Load("Assets/Shaders/FullScreen.vert.glsl", "Assets/Shaders/FullScreen.frag.glsl");
         }
 
         override protected void OnUnload()
@@ -150,10 +153,11 @@ namespace LearnOpenTKRender
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
-
+            GL.Enable(EnableCap.DepthTest);
             _controller.Update(this, (float)args.Time, !_cameraEnable);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+            _framebuffer.Bind();
+            _framebuffer.Clear(new Color4(0.2f, 0.3f, 0.3f, 1.0f));
             _vao.Bind();
             _shader.Use();
             _diffuseTex.BindToUnit(0);
@@ -170,8 +174,14 @@ namespace LearnOpenTKRender
             //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
 
-
-
+            _framebuffer.Unbind();
+            GL.Disable(EnableCap.DepthTest);
+            GL.ClearColor(Color4.Black);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            _fullScreenVao.Bind();
+            _fullScreenShader.Use();
+            _attachmentColorTexture.BindToUnit(0);
+            GL.DrawElements(PrimitiveType.Triangles, _fullScreenIbo.Count, DrawElementsType.UnsignedInt, 0);
 
 
             // Enable Docking
@@ -204,6 +214,18 @@ namespace LearnOpenTKRender
             _controller.WindowResized(ClientSize.X, ClientSize.Y);
             GL.Viewport(0, 0, e.Width, e.Height);
             _camera.OnWindowResize(e.Width, e.Height);
+
+            _attachmentDepthTexture.Dispose();
+            _attachmentDepthTexture = Texture2D.CreateDepthBuffer(e.Width, e.Height);
+
+            _attachmentColorTexture.Dispose();
+            _attachmentColorTexture = Texture2D.CreateRenderTarget(e.Width, e.Height);
+            _framebuffer.Dispose();
+            _framebuffer = new Framebuffer(e.Width, e.Height);
+            _framebuffer.AttachColorTexture(_attachmentColorTexture);
+            _framebuffer.AttachDepthTexture(_attachmentDepthTexture);
+            _framebuffer.SetDrawBuffers(DrawBuffersEnum.ColorAttachment0);
+
         }
 
         protected override void OnTextInput(TextInputEventArgs e)
