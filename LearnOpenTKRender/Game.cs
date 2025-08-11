@@ -37,6 +37,16 @@ namespace LearnOpenTKRender
             -0.5f,  0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f, // Top Left
         ];
 
+
+        private float[] _fullScreenVertices =
+        [
+
+        ];
+
+        uint[] _fullScreenIndex =
+        [
+          
+        ];
         uint[] _index =
         [
             // Front face
@@ -59,6 +69,15 @@ namespace LearnOpenTKRender
         private UniformBuffer _ubo;
         private Shader _shader;
         private Texture2D _diffuseTex;
+
+
+        private VertexBuffer _fullScreenVbo;
+
+        private IndexBuffer _fullScreenIbo;
+
+        private Shader _fullScreenShader;
+
+        private VertexArray _fullScreenVao;
 
 
         private Texture2D _attachmentColorTexture;
@@ -100,6 +119,21 @@ namespace LearnOpenTKRender
 
             _attachmentDepthTexture = Texture2D.CreateDepthBuffer(this.FramebufferSize.X,this.FramebufferSize.Y);
             _attachmentColorTexture = Texture2D.CreateRenderTarget(this.FramebufferSize.X, this.FramebufferSize.Y);
+            _framebuffer = new Framebuffer(this.FramebufferSize.X, this.FramebufferSize.Y);
+
+            _framebuffer.AttachColorTexture(_attachmentColorTexture,0);
+            _framebuffer.AttachDepthTexture(_attachmentDepthTexture);
+
+            _fullScreenVao = new VertexArray();
+            _fullScreenVbo = new VertexBuffer(_fullScreenVertices);
+            _fullScreenIbo = new IndexBuffer(_fullScreenIndex);
+            _fullScreenVao.AddVertexBuffer(_fullScreenVbo, new BufferLayout([
+                new BufferElement(ShaderDataType.Float3), // Vertex position
+                new BufferElement(ShaderDataType.Float2)]) // Vertex texCoord
+            );
+            _fullScreenVao.AddIndexBuffer(_fullScreenIbo);
+
+
         }
 
         override protected void OnUnload()
@@ -133,10 +167,6 @@ namespace LearnOpenTKRender
                 Projection = projection
             };
             _ubo.UpdateData(ref ubo);
-            // _shader.SetUniform("uModel", uModel);
-            // _shader.SetUniform("uView", view);
-            // _shader.SetUniform("uProjection", projection);
-
             //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
 
