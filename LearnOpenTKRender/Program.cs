@@ -5,6 +5,8 @@ namespace LearnOpenTKRender
 {
     internal class Program
     {
+        private const int Width = 1920;
+        private const int Height = 1080;
         static void Main(string[] args)
         {
 
@@ -16,7 +18,7 @@ namespace LearnOpenTKRender
                 },
                 new NativeWindowSettings()
                 {
-                    ClientSize = new Vector2i(800, 600),
+                    ClientSize = new Vector2i(Width, Height),
                     Title = "Learn OpenTK Render"
                 }
             );

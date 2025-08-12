@@ -15,10 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\Images\container2.png">
+    <None Update="Assets\Images\container2_diffuse.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\Images\diffuse.png">
+    <None Update="Assets\Images\container2_specular.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Images\matrix.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Shaders\FullScreen.frag.glsl">
