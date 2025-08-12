@@ -11,8 +11,7 @@ internal class VertexArray : IDisposable
     {
         GL.CreateVertexArrays(1, out Handle);
     }
-
-    public void AddVertexBuffer(VertexBuffer buffer, BufferLayout layout)
+     public void AddVertexBuffer(VertexBuffer buffer, BufferLayout layout)
     {
         int offset = 0;
         foreach (var element in layout.Elements)
