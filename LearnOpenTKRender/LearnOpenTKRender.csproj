@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AssimpNet" Version="4.1.0" />
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
     <PackageReference Include="OpenTK" Version="4.9.4" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
@@ -22,6 +23,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Images\matrix.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Models\german-ksk-operator-rigged\source\Idle.fbx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Models\german-ksk-operator-rigged\textures\Tex_0002_0_%283%29.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Models\german-ksk-operator-rigged\textures\Tex_0006_0_%283%29.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Models\german-ksk-operator-rigged\textures\Tex_0010_0_%283%29.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Shaders\FullScreen.frag.glsl">

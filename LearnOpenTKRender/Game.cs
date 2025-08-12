@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.Runtime.InteropServices;
+﻿
 using Dear_ImGui_Sample;
 using ImGuiNET;
 using LearnOpenTKRender.OpenGL;
@@ -8,6 +7,8 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.Drawing;
+using System.Runtime.InteropServices;
 using PixelFormat = LearnOpenTKRender.OpenGL.PixelFormat;
 
 namespace LearnOpenTKRender
@@ -128,8 +129,6 @@ namespace LearnOpenTKRender
         protected override void OnLoad()
         {
             base.OnLoad();
-
-
             _vao = new VertexArray();
             _vbo = new VertexBuffer(_vertices);
             _ibo = new IndexBuffer(_index);
@@ -175,7 +174,11 @@ namespace LearnOpenTKRender
             _fullScreenVao.AddIndexBuffer(_fullScreenIbo);
             _fullScreenShader = ShaderLoader.Load("Assets/Shaders/FullScreen.vert.glsl",
                 "Assets/Shaders/FullScreen.frag.glsl");
+            var model = ModelLoader.LoadModel("Assets/Models/german-ksk-operator-rigged/source/Idle.fbx");
+            mesh = model.Meshes[3];
         }
+
+        private StaticMesh mesh;
 
         override protected void OnUnload()
         {
@@ -200,7 +203,8 @@ namespace LearnOpenTKRender
 
             _framebuffer.Bind();
             _framebuffer.Clear(new Color4(0.2f, 0.3f, 0.3f, 1.0f));
-            _vao.Bind();
+            //_vao.Bind();
+            mesh.Bind();
             _shader.Use();
             _diffuseTex.BindToUnit(0);
             _specularTex.BindToUnit(1);
@@ -221,7 +225,7 @@ namespace LearnOpenTKRender
             _shader.SetUniform("uLightPos", _lightPos);
             _shader.SetUniform("uLightColor", new Vector3(1, 1, 1));
             GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
-            //GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(PrimitiveType.Triangles, mesh.IndexCount, DrawElementsType.UnsignedInt, 0);
 
             _framebuffer.Unbind();
             GL.Disable(EnableCap.DepthTest);
