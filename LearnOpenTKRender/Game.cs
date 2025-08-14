@@ -174,11 +174,8 @@ namespace LearnOpenTKRender
             _fullScreenVao.AddIndexBuffer(_fullScreenIbo);
             _fullScreenShader = ShaderLoader.Load("Assets/Shaders/FullScreen.vert.glsl",
                 "Assets/Shaders/FullScreen.frag.glsl");
-            var model = ModelLoader.LoadModel("Assets/Models/german-ksk-operator-rigged/source/Idle.fbx");
-            mesh = model.Meshes[3];
         }
 
-        private StaticMesh mesh;
 
         override protected void OnUnload()
         {
@@ -203,14 +200,12 @@ namespace LearnOpenTKRender
 
             _framebuffer.Bind();
             _framebuffer.Clear(new Color4(0.2f, 0.3f, 0.3f, 1.0f));
-            //_vao.Bind();
-            mesh.Bind();
+            _vao.Bind();
             _shader.Use();
             _diffuseTex.BindToUnit(0);
             _specularTex.BindToUnit(1);
             _emissionTex.BindToUnit(2);
             Matrix4.CreateRotationY(MathHelper.DegreesToRadians((float)_time), out var model);
-            //var model = Matrix4.Identity;
             var view = _camera.GetViewMatrix();
             var projection = _camera.GetProjectionMatrix();
             EngineUBO ubo = new EngineUBO()
@@ -225,7 +220,7 @@ namespace LearnOpenTKRender
             _shader.SetUniform("uLightPos", _lightPos);
             _shader.SetUniform("uLightColor", new Vector3(1, 1, 1));
             GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
-            GL.DrawElements(PrimitiveType.Triangles, mesh.IndexCount, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(PrimitiveType.Triangles, _ibo.Count, DrawElementsType.UnsignedInt, 0);
 
             _framebuffer.Unbind();
             GL.Disable(EnableCap.DepthTest);

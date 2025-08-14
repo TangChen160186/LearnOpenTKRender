@@ -7,7 +7,7 @@ internal class TransformComponent : ComponentBase
 {
     public FTransform Transform { get; set; }
 
-    public TransformComponent(Entity entity) : base(entity)
+    public TransformComponent()
     {
         Transform = new FTransform();
     }

@@ -6,11 +6,50 @@ namespace LearnOpenTKRender.OpenGL;
 internal class Model
 {
     public List<StaticMesh> Meshes { get; private set; }
-
+    private readonly Dictionary<string, StaticMesh> _meshByName = new();
 
     public Model(List<StaticMesh> meshes)
     {
         Meshes = meshes;
+
+        // 建立名称到网格的映射
+        for (int i = 0; i < meshes.Count; i++)
+        {
+            var mesh = meshes[i];
+            var meshName = !string.IsNullOrEmpty(mesh.MaterialName) ? mesh.MaterialName : $"Mesh_{i}";
+            _meshByName[meshName] = mesh;
+        }
+    }
+
+    /// <summary>
+    /// 根据名称获取网格
+    /// </summary>
+    /// <param name="name">网格名称或材质名称</param>
+    /// <returns>网格对象，如果不存在则返回null</returns>
+    public StaticMesh? GetMeshByName(string name)
+    {
+        return _meshByName.TryGetValue(name, out var mesh) ? mesh : null;
+    }
+
+    /// <summary>
+    /// 获取所有网格名称
+    /// </summary>
+    /// <returns>网格名称列表</returns>
+    public IEnumerable<string> GetMeshNames()
+    {
+        return _meshByName.Keys;
+    }
+
+    /// <summary>
+    /// 根据索引获取网格
+    /// </summary>
+    /// <param name="index">网格索引</param>
+    /// <returns>网格对象，如果索引无效则返回null</returns>
+    public StaticMesh? GetMeshByIndex(int index)
+    {
+        if (index < 0 || index >= Meshes.Count)
+            return null;
+        return Meshes[index];
     }
 }
 
@@ -162,9 +201,158 @@ class StaticMesh
     }
 
 }
-class Material
+/// <summary>
+/// 材质类 - 封装着色器和纹理的组合
+/// </summary>
+class Material : IDisposable
 {
-    
+    private readonly Dictionary<string, Texture2D> _textures = new();
+    private readonly Dictionary<string, object> _properties = new();
+    private bool _disposed = false;
+
+    /// <summary>
+    /// 材质名称
+    /// </summary>
+    public string Name { get; set; } = "DefaultMaterial";
+
+    /// <summary>
+    /// 关联的着色器
+    /// </summary>
+    public Shader? Shader { get; set; }
+
+    /// <summary>
+    /// 设置纹理
+    /// </summary>
+    /// <param name="name">纹理名称</param>
+    /// <param name="texture">纹理对象</param>
+    public void SetTexture(string name, Texture2D texture)
+    {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Texture name cannot be null or empty", nameof(name));
+
+        ArgumentNullException.ThrowIfNull(texture);
+        _textures[name] = texture;
+    }
+
+    /// <summary>
+    /// 获取纹理
+    /// </summary>
+    /// <param name="name">纹理名称</param>
+    /// <returns>纹理对象，如果不存在则返回null</returns>
+    public Texture2D? GetTexture(string name)
+    {
+        return _textures.TryGetValue(name, out var texture) ? texture : null;
+    }
+
+    /// <summary>
+    /// 设置材质属性
+    /// </summary>
+    /// <param name="name">属性名称</param>
+    /// <param name="value">属性值</param>
+    public void SetProperty(string name, object value)
+    {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Property name cannot be null or empty", nameof(name));
+
+        _properties[name] = value;
+    }
+
+    /// <summary>
+    /// 获取材质属性
+    /// </summary>
+    /// <param name="name">属性名称</param>
+    /// <returns>属性值，如果不存在则返回默认值</returns>
+    public T? GetProperty<T>(string name)
+    {
+        if (_properties.TryGetValue(name, out var value) && value is T typedValue)
+        {
+            return typedValue;
+        }
+        return default;
+    }
+
+    /// <summary>
+    /// 应用材质到渲染管线
+    /// </summary>
+    public void Apply()
+    {
+        if (Shader == null)
+            return;
+
+        Shader.Use();
+
+        // 绑定纹理
+        int textureUnit = 0;
+        foreach (var kvp in _textures)
+        {
+            kvp.Value.BindToUnit(textureUnit);
+            textureUnit++;
+        }
+
+        // 应用属性
+        foreach (var kvp in _properties)
+        {
+            ApplyProperty(kvp.Key, kvp.Value);
+        }
+    }
+
+    private void ApplyProperty(string name, object value)
+    {
+        if (Shader == null)
+            return;
+
+        switch (value)
+        {
+            case float floatValue:
+                Shader.TrySetUniform(name, floatValue);
+                break;
+            case int intValue:
+                Shader.TrySetUniform(name, intValue);
+                break;
+            case bool boolValue:
+                Shader.TrySetUniform(name, boolValue);
+                break;
+            case System.Numerics.Vector2 vec2Value:
+                Shader.TrySetUniform(name, new OpenTK.Mathematics.Vector2(vec2Value.X, vec2Value.Y));
+                break;
+            case System.Numerics.Vector3 vec3Value:
+                Shader.TrySetUniform(name, new OpenTK.Mathematics.Vector3(vec3Value.X, vec3Value.Y, vec3Value.Z));
+                break;
+            case System.Numerics.Vector4 vec4Value:
+                Shader.TrySetUniform(name, new OpenTK.Mathematics.Vector4(vec4Value.X, vec4Value.Y, vec4Value.Z, vec4Value.W));
+                break;
+            case OpenTK.Mathematics.Vector2 openTKVec2:
+                Shader.TrySetUniform(name, openTKVec2);
+                break;
+            case OpenTK.Mathematics.Vector3 openTKVec3:
+                Shader.TrySetUniform(name, openTKVec3);
+                break;
+            case OpenTK.Mathematics.Vector4 openTKVec4:
+                Shader.TrySetUniform(name, openTKVec4);
+                break;
+            case OpenTK.Mathematics.Matrix4 openTKMat4:
+                Shader.TrySetUniform(name, openTKMat4);
+                break;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        foreach (var texture in _textures.Values)
+        {
+            texture?.Dispose();
+        }
+        _textures.Clear();
+
+        Shader?.Dispose();
+        Shader = null;
+
+        _properties.Clear();
+        _disposed = true;
+    }
 }
     
 
