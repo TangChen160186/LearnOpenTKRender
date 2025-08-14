@@ -5,22 +5,22 @@ using OpenTK.Mathematics;
 namespace LearnOpenTKRender.Engine.Ecs;
 
 /// <summary>
-/// äÖÈ¾ÏµÍ³ - ¸ºÔðäÖÈ¾ËùÓÐ¾ßÓÐMeshFilterºÍMeshRenderer×é¼þµÄÊµÌå
+/// ï¿½ï¿½È¾ÏµÍ³ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½Ð¾ï¿½ï¿½ï¿½MeshFilterï¿½ï¿½MeshRendererï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
 /// </summary>
 internal class RenderSystem
 {
     private readonly List<Entity> _entities = new();
 
     /// <summary>
-    /// ×¢²áÊµÌåµ½äÖÈ¾ÏµÍ³
+    /// ×¢ï¿½ï¿½Êµï¿½åµ½ï¿½ï¿½È¾ÏµÍ³
     /// </summary>
-    /// <param name="entity">Òª×¢²áµÄÊµÌå</param>
+    /// <param name="entity">Òª×¢ï¿½ï¿½ï¿½Êµï¿½ï¿½</param>
     public void RegisterEntity(Entity entity)
     {
         if (entity == null)
             throw new ArgumentNullException(nameof(entity));
 
-        // ¼ì²éÊµÌåÊÇ·ñ¾ßÓÐ±ØÒªµÄ×é¼þ
+        // ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ð±ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½
         if (entity.HasComponent<MeshFilterComponent>() && entity.HasComponent<MeshRendererComponent>())
         {
             if (!_entities.Contains(entity))
@@ -31,22 +31,22 @@ internal class RenderSystem
     }
 
     /// <summary>
-    /// ´ÓäÖÈ¾ÏµÍ³ÖÐ×¢ÏúÊµÌå
+    /// ï¿½ï¿½ï¿½ï¿½È¾ÏµÍ³ï¿½ï¿½×¢ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
-    /// <param name="entity">Òª×¢ÏúµÄÊµÌå</param>
+    /// <param name="entity">Òª×¢ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½</param>
     public void UnregisterEntity(Entity entity)
     {
         _entities.Remove(entity);
     }
 
     /// <summary>
-    /// äÖÈ¾ËùÓÐ×¢²áµÄÊµÌå
+    /// ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
-    /// <param name="viewMatrix">ÊÓÍ¼¾ØÕó</param>
-    /// <param name="projectionMatrix">Í¶Ó°¾ØÕó</param>
+    /// <param name="viewMatrix">ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½</param>
+    /// <param name="projectionMatrix">Í¶Ó°ï¿½ï¿½ï¿½ï¿½</param>
     public void Render(Matrix4 viewMatrix, Matrix4 projectionMatrix)
     {
-        // °´äÖÈ¾ÓÅÏÈ¼¶ÅÅÐò
+        // ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½
         var sortedEntities = _entities
             .Where(e => e.GetComponent<MeshRendererComponent>()?.Enabled == true)
             .OrderBy(e => e.GetComponent<MeshRendererComponent>()?.RenderPriority ?? 0)
@@ -59,11 +59,11 @@ internal class RenderSystem
     }
 
     /// <summary>
-    /// äÖÈ¾µ¥¸öÊµÌå
+    /// ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
-    /// <param name="entity">ÒªäÖÈ¾µÄÊµÌå</param>
-    /// <param name="viewMatrix">ÊÓÍ¼¾ØÕó</param>
-    /// <param name="projectionMatrix">Í¶Ó°¾ØÕó</param>
+    /// <param name="entity">Òªï¿½ï¿½È¾ï¿½ï¿½Êµï¿½ï¿½</param>
+    /// <param name="viewMatrix">ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½</param>
+    /// <param name="projectionMatrix">Í¶Ó°ï¿½ï¿½ï¿½ï¿½</param>
     private void RenderEntity(Entity entity, Matrix4 viewMatrix, Matrix4 projectionMatrix)
     {
         var meshFilter = entity.GetComponent<MeshFilterComponent>();
@@ -73,14 +73,14 @@ internal class RenderSystem
         if (meshFilter == null || meshRenderer == null || !meshFilter.HasMesh)
             return;
 
-        // ×¼±¸äÖÈ¾×´Ì¬
+        // ×¼ï¿½ï¿½ï¿½ï¿½È¾×´Ì¬
         meshRenderer.PrepareRender();
 
-        // ÉèÖÃ±ä»»¾ØÕó
+        // ï¿½ï¿½ï¿½Ã±ä»»ï¿½ï¿½ï¿½ï¿½
         Matrix4 modelMatrix = Matrix4.Identity;
         if (transform != null)
         {
-            // ×ª»»System.Numerics.Matrix4x4µ½OpenTK.Mathematics.Matrix4
+            // ×ªï¿½ï¿½System.Numerics.Matrix4x4ï¿½ï¿½OpenTK.Mathematics.Matrix4
             var localToWorld = transform.LocalToWorldMatrix;
             modelMatrix = new Matrix4(
                 localToWorld.M11, localToWorld.M12, localToWorld.M13, localToWorld.M14,
@@ -89,7 +89,7 @@ internal class RenderSystem
                 localToWorld.M41, localToWorld.M42, localToWorld.M43, localToWorld.M44);
         }
 
-        // ÉèÖÃ±ê×¼uniform
+        // ï¿½ï¿½ï¿½Ã±ï¿½×¼uniform
         if (meshRenderer.Shader != null)
         {
             meshRenderer.Shader.TrySetUniform("uModel", modelMatrix);
@@ -98,16 +98,16 @@ internal class RenderSystem
             meshRenderer.Shader.TrySetUniform("uMVP", modelMatrix * viewMatrix * projectionMatrix);
         }
 
-        // Ó¦ÓÃ²ÄÖÊÊôÐÔ
+        // Ó¦ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         meshRenderer.ApplyMaterialProperties();
 
-        // °ó¶¨Íø¸ñ²¢äÖÈ¾
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾
         meshFilter.BindMesh();
         GL.DrawElements(PrimitiveType.Triangles, meshFilter.IndexCount, DrawElementsType.UnsignedInt, 0);
     }
 
     /// <summary>
-    /// ÇåÀíËùÓÐÊµÌå
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
     public void Clear()
     {
@@ -115,18 +115,18 @@ internal class RenderSystem
     }
 
     /// <summary>
-    /// »ñÈ¡µ±Ç°×¢²áµÄÊµÌåÊýÁ¿
+    /// ï¿½ï¿½È¡ï¿½ï¿½Ç°×¢ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public int EntityCount => _entities.Count;
 
     /// <summary>
-    /// »ñÈ¡ËùÓÐ×¢²áµÄÊµÌå£¨Ö»¶Á£©
+    /// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½Êµï¿½å£¨Ö»ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public IReadOnlyList<Entity> Entities => _entities.AsReadOnly();
 }
 
 /// <summary>
-/// äÖÈ¾ÏµÍ³¹ÜÀíÆ÷ - µ¥ÀýÄ£Ê½
+/// ï¿½ï¿½È¾ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 /// </summary>
 internal class RenderSystemManager
 {
@@ -150,35 +150,35 @@ internal class RenderSystemManager
     public RenderSystem RenderSystem => _renderSystem;
 
     /// <summary>
-    /// ×Ô¶¯×¢²áÊµÌå£¨Èç¹û¾ßÓÐ±ØÒª×é¼þ£©
+    /// ï¿½Ô¶ï¿½×¢ï¿½ï¿½Êµï¿½å£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
-    /// <param name="entity">ÊµÌå</param>
+    /// <param name="entity">Êµï¿½ï¿½</param>
     public void AutoRegisterEntity(Entity entity)
     {
         _renderSystem.RegisterEntity(entity);
     }
 
     /// <summary>
-    /// ×¢ÏúÊµÌå
+    /// ×¢ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
-    /// <param name="entity">ÊµÌå</param>
+    /// <param name="entity">Êµï¿½ï¿½</param>
     public void UnregisterEntity(Entity entity)
     {
         _renderSystem.UnregisterEntity(entity);
     }
 
     /// <summary>
-    /// äÖÈ¾ËùÓÐÊµÌå
+    /// ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
-    /// <param name="viewMatrix">ÊÓÍ¼¾ØÕó</param>
-    /// <param name="projectionMatrix">Í¶Ó°¾ØÕó</param>
+    /// <param name="viewMatrix">ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½</param>
+    /// <param name="projectionMatrix">Í¶Ó°ï¿½ï¿½ï¿½ï¿½</param>
     public void Render(Matrix4 viewMatrix, Matrix4 projectionMatrix)
     {
         _renderSystem.Render(viewMatrix, projectionMatrix);
     }
 
     /// <summary>
-    /// ÇåÀíËùÓÐÊµÌå
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
     /// </summary>
     public void Clear()
     {

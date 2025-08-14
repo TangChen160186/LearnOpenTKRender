@@ -4,54 +4,174 @@ using OpenTK.Graphics.OpenGL4;
 namespace LearnOpenTKRender.Ecs;
 
 /// <summary>
-/// 网格过滤器组件 - 负责存储和管理网格数据
+/// 网格过滤器组件 - 负责存储模型并允许选择特定的网格进行渲染
 /// </summary>
 internal class MeshFilterComponent : ComponentBase
 {
-    private StaticMesh? _mesh;
+    private Model? _model;
+    private string _selectedMeshName = string.Empty;
+    private StaticMesh? _currentMesh;
 
     /// <summary>
-    /// 当前使用的网格
+    /// 设置的模型
     /// </summary>
-    public StaticMesh? Mesh
+    public Model? Model
     {
-        get => _mesh;
-        set => _mesh = value;
+        get => _model;
+        set
+        {
+            _model = value;
+            // 当设置新模型时，重置选择
+            if (_model != null && _model.Meshes.Count > 0)
+            {
+                // 默认选择第一个mesh
+                var firstMeshName = _model.GetMeshNames().FirstOrDefault();
+                if (!string.IsNullOrEmpty(firstMeshName))
+                {
+                    SelectMesh(firstMeshName);
+                }
+            }
+            else
+            {
+                _selectedMeshName = string.Empty;
+                _currentMesh = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 当前选择的mesh名称
+    /// </summary>
+    public string SelectedMeshName
+    {
+        get => _selectedMeshName;
+        set => SelectMesh(value);
+    }
+
+    /// <summary>
+    /// 当前渲染的网格
+    /// </summary>
+    public StaticMesh? CurrentMesh => _currentMesh;
+
+    /// <summary>
+    /// 获取所有可用的mesh名称（用于UI下拉框）
+    /// </summary>
+    public IEnumerable<string> AvailableMeshNames
+    {
+        get
+        {
+            if (_model == null)
+                return Enumerable.Empty<string>();
+            return _model.GetMeshNames();
+        }
     }
 
     /// <summary>
     /// 是否有有效的网格数据
     /// </summary>
-    public bool HasMesh => _mesh != null;
+    public bool HasMesh => _currentMesh != null;
 
     /// <summary>
-    /// 获取网格的材质名称
+    /// 获取当前网格的材质名称
     /// </summary>
-    public string? MaterialName => _mesh?.MaterialName;
+    public string? MaterialName => _currentMesh?.MaterialName;
 
     /// <summary>
-    /// 获取网格的索引数量
+    /// 获取当前网格的索引数量
     /// </summary>
-    public int IndexCount => _mesh?.IndexCount ?? 0;
+    public int IndexCount => _currentMesh?.IndexCount ?? 0;
+
+    /// <summary>
+    /// 模型中mesh的数量
+    /// </summary>
+    public int MeshCount => _model?.Meshes.Count ?? 0;
 
     public MeshFilterComponent()
     {
     }
 
     /// <summary>
-    /// 绑定网格用于渲染
+    /// 选择要渲染的mesh
     /// </summary>
-    public void BindMesh()
+    /// <param name="meshName">mesh名称</param>
+    /// <returns>是否选择成功</returns>
+    public bool SelectMesh(string meshName)
     {
-        _mesh?.Bind();
+        if (_model == null || string.IsNullOrEmpty(meshName))
+        {
+            _selectedMeshName = string.Empty;
+            _currentMesh = null;
+            return false;
+        }
+
+        var mesh = _model.GetMeshByName(meshName);
+        if (mesh != null)
+        {
+            _selectedMeshName = meshName;
+            _currentMesh = mesh;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// 清除网格数据
+    /// 按索引选择mesh（用于向后兼容）
+    /// </summary>
+    /// <param name="index">mesh索引</param>
+    /// <returns>是否选择成功</returns>
+    public bool SelectMeshByIndex(int index)
+    {
+        if (_model == null || index < 0 || index >= _model.Meshes.Count)
+            return false;
+
+        var mesh = _model.GetMeshByIndex(index);
+        if (mesh != null)
+        {
+            // 找到对应的名称
+            var meshNames = _model.GetMeshNames().ToList();
+            if (index < meshNames.Count)
+            {
+                _selectedMeshName = meshNames[index];
+                _currentMesh = mesh;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 绑定当前选择的网格用于渲染
+    /// </summary>
+    public void BindMesh()
+    {
+        _currentMesh?.Bind();
+    }
+
+    /// <summary>
+    /// 清除所有数据
     /// </summary>
     public void Clear()
     {
-        _mesh = null;
+        _model = null;
+        _selectedMeshName = string.Empty;
+        _currentMesh = null;
+    }
+
+    /// <summary>
+    /// 获取mesh选择的调试信息
+    /// </summary>
+    /// <returns>调试信息字符串</returns>
+    public string GetDebugInfo()
+    {
+        if (_model == null)
+            return "No model loaded";
+
+        var info = $"Model: {_model.Meshes.Count} meshes\n";
+        info += $"Selected: {_selectedMeshName}\n";
+        info += $"Available meshes: {string.Join(", ", AvailableMeshNames)}";
+        return info;
     }
 }
 
